@@ -6,3 +6,14 @@ pre-commit:
     type-check:
       glob: "*.{js,ts,tsx}"
       run: npx tsc --noEmit
+    # Rust gate for the Soroban contract (#1493). These only run when *.rs
+    # files are staged, mirroring the CI steps in .github/workflows/ci.yml.
+    # clippy needs the same spec-shaking marker CI sets for `cargo check`.
+    rust-fmt:
+      glob: "*.rs"
+      run: cargo fmt --all -- --check
+    rust-clippy:
+      glob: "*.rs"
+      env:
+        SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: "1"
+      run: cargo clippy --workspace --all-targets -- -D warnings

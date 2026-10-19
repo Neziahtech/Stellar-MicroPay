@@ -105,6 +105,30 @@ cd contracts/stellar-micropay-contract
 cargo build --target wasm32-unknown-unknown --release
 ```
 
+#### Checking your contract changes locally (#1493)
+
+CI runs these same gates on every PR that touches the contract, so run them
+before you push. `cargo check`, `cargo test`, and `cargo clippy` need the
+spec-shaking marker that the Soroban SDK build script expects (the deployable
+artifact is still built with `stellar contract build`):
+
+```bash
+cd contracts/stellar-micropay-contract
+
+# Formatting (must be clean; run `cargo fmt` to fix)
+cargo fmt --all -- --check
+
+# Lints — any warning fails the gate; suppress only with a justified #[allow(...)]
+SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 \
+  cargo clippy --workspace --all-targets -- -D warnings
+
+# Tests
+SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo test
+```
+
+Lefthook runs the fmt + clippy pair automatically on commit whenever staged
+files include Rust sources.
+
 ---
 
 ## ✏️ Making Changes

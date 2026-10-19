@@ -226,7 +226,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32v1-none, wasm32-unknown-unknown
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      # #1493 — format and lint gate for the Soroban contract. The contract
+      # workspace is the only Rust code in this repo, so --all targets it.
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+      # -D warnings turns every clippy warning into a CI failure. Anything
+      # intentionally allowed in the source carries an #[allow(...)] with a
+      # justification comment.
+      - name: cargo clippy (fails on any warning)
+        run: cargo clippy --workspace --all-targets -- -D warnings
       # Scans the workspace Cargo.lock, which pins the contract at
       # contracts/stellar-micropay-contract. cargo audit has no severity
       # threshold like npm's --audit-level, so it fails on any vulnerability

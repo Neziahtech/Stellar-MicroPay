@@ -17,6 +17,26 @@ The contract is written in Rust and compiled to WebAssembly (WASM) for deploymen
   approver, or reclaimed by the payer once a dispute times out
 - Placeholder stub for batch payments
 
+## Source layout (#1490)
+
+The contract code lives in feature modules instead of one `lib.rs`. `src/lib.rs`
+keeps the public surface: the `#[contract]` type, the error enum, and a single
+`#[contractimpl]` block whose entry points are one-line delegations into the
+modules. Signatures, parameter names, and doc comments (which the Soroban spec
+embeds) are unchanged, so the compiled spec is identical to the pre-split one.
+
+| File | Responsibility |
+| --- | --- |
+| `src/lib.rs` | Contract entry points (delegations), `ContractError`, shared re-exports |
+| `src/storage.rs` | `DataKey` storage keys, TTL constants, `bump_instance`, `require_not_frozen` |
+| `src/admin.rs` | Initialization, upgrade, admin rotation, freeze/unfreeze |
+| `src/tips.rs` | `send_tip`, `batch_tip`, operator fee, tip records and totals |
+| `src/receipts.rs` | NFT payment receipts (mint + readers) |
+| `src/streams.rs` | Streaming payments: open/claim/top-up/close/pause/resume |
+| `src/escrow.rs` | Plain escrow and milestone escrow lifecycles, milestone events |
+| `src/batch.rs` | `batch_send` placeholder |
+| `src/tests/` | One test module per feature plus shared fixtures in `tests/mod.rs`; randomized escrow invariants in `tests/escrow_properties.rs` and `tests/stream_properties.rs` |
+
 ## Prerequisites
 
 ```bash
@@ -44,6 +64,27 @@ Output: `target/wasm32v1-none/release/stellar_micropay_contract.wasm`
 ```bash
 cargo test
 ```
+
+The Soroban SDK build script wants the spec-shaking marker for host-target
+compiles (`cargo test`, `cargo check`, `cargo clippy`), the same one CI sets:
+
+```bash
+SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo test
+```
+
+## Lint and format (#1493)
+
+CI gates every contract change on these two commands; run them locally before
+pushing (Lefthook also runs them on commit when Rust files are staged):
+
+```bash
+cargo fmt --all -- --check
+SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 \
+  cargo clippy --workspace --all-targets -- --deny warnings
+```
+
+Clippy findings are fixed in the code rather than blanket-suppressed; any
+`#[allow(...)]` carries a comment explaining why.
 
 ## Security review (#1121)
 
